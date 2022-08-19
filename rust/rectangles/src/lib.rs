@@ -1,22 +1,29 @@
+#[derive(Debug)]
+enum Direction {
+    Horizontal,
+    Vertical(usize),
+}
+
 pub fn count(lines: &[&str]) -> u32 {
-    dbg!(&lines);
     let mut v: Vec<char> = Vec::new();
-    let l = lines[0].len();
-    let mut r = 0;
-    lines
-        .iter()
-        .for_each(|line| line.chars().for_each(|c| v.push(c)));
-    v.iter().enumerate().for_each(|(i, &c)| {
-        if c == '+' {
-            r += find_rectangle(i, &v, &l);
-        }
-    });
-    dbg!(v, l, r);
-    r as u32
+    if let Some(l) = lines.get(0) {
+        let mut r = 0;
+        lines
+            .iter()
+            .for_each(|line| line.chars().for_each(|c| v.push(c)));
+        v.iter().enumerate().for_each(|(i, &c)| {
+            if c == '+' {
+                r += find_rectangle(i, &v, &l.len());
+            }
+        });
+        r as u32
+    } else {
+        0
+    }
 }
 
 fn find_rectangle(i: usize, v: &Vec<char>, length: &usize) -> usize {
-    // TODO Check if there is another cross in the right side of the one we just
+    // Check if there is another cross in the right side of the one we just
     // found
     let upper_right_vertices: Vec<(usize, char)> = v
         .iter()
@@ -25,7 +32,7 @@ fn find_rectangle(i: usize, v: &Vec<char>, length: &usize) -> usize {
         .map(|(j, &c)| (j, c))
         .collect();
 
-    // TODO Check if there is a cross below
+    // Check if there is a cross below
     let lower_left_vertices: Vec<(usize, char)> = v
         .iter()
         .enumerate()
@@ -33,7 +40,7 @@ fn find_rectangle(i: usize, v: &Vec<char>, length: &usize) -> usize {
         .map(|(j, &c)| (j, c))
         .collect();
 
-    // TODO Check if there is a final cross completing the rectangle
+    // Check if there is a final cross completing the rectangle
     // Return a point of each edge
     let lower_right_vertices: Vec<(usize, char)> = v
         .iter()
@@ -51,30 +58,40 @@ fn find_rectangle(i: usize, v: &Vec<char>, length: &usize) -> usize {
         .map(|(j, &c)| (j, c))
         .collect();
 
-    // TODO Check if edges are valid
-    let f: Vec<(usize, char)> = lower_right_vertices
+    // Check if edges are valid
+    let f: Vec<(usize, usize)> = lower_right_vertices
         .iter()
         .filter(|(j, _)| {
-            !v[i..*j].iter().enumerate().any(|(k, &c)| {
-                false
-                    || (k > i
-                        && k / length == i / length
-                        && k % length > i % length
-                        && k % length < j % length
-                        && (c != '+' && c != '-'))
-                    || (k > i
-                        && k / length == j / length
-                        && k % length > i % length
-                        && k % length < j % length
-                        && (c != '+' && c != '-'))
-                    || (k > i && k % length == i % length && (c != '+' && c != '|'))
-                    || (k > i && k % length == j % length && (c != '+' && c != '|'))
-            })
+            is_valid_line(i, i + j % length - i % length, Direction::Horizontal, &v)
+                && is_valid_line(
+                    i,
+                    j - (j % length - i % length),
+                    Direction::Vertical(*length),
+                    &v,
+                )
+                && is_valid_line(j - (j % length - i % length), *j, Direction::Horizontal, &v)
+                && is_valid_line(
+                    i + j % length - i % length,
+                    *j,
+                    Direction::Vertical(*length),
+                    &v,
+                )
         })
-        .map(|(j, c)| (*j, *c))
+        .map(|(j, _)| (i, *j))
         .collect();
 
-    dbg!(f);
+    f.len()
+}
 
-    lower_right_vertices.len()
+fn is_valid_line(x: usize, y: usize, direction: Direction, v: &Vec<char>) -> bool {
+    match direction {
+        Direction::Horizontal => !v
+            .iter()
+            .enumerate()
+            .any(|(i, &c)| i >= x && i <= y && (c != '+' && c != '-')),
+        Direction::Vertical(l) => !v
+            .iter()
+            .enumerate()
+            .any(|(i, &c)| i >= x && i <= y && i % l == x % l && (c != '+' && c != '|')),
+    }
 }
